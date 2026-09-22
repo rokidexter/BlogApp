@@ -1,3 +1,4 @@
+```groovy
 pipeline {
     agent any
 
@@ -6,6 +7,34 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Verify Environment') {
+            steps {
+                sh '''
+                    echo "=== Jenkins Shell ==="
+                    echo "PATH=$PATH"
+                    whoami
+                    pwd
+
+                    echo "=== Node ==="
+                    command -v node || true
+                    node --version || true
+
+                    echo "=== npm ==="
+                    command -v npm || true
+                    npm --version || true
+
+                    echo "=== Docker ==="
+                    docker --version
+
+                    echo "=== AWS Identity ==="
+                    aws sts get-caller-identity
+
+                    echo "=== Kubernetes Nodes ==="
+                    kubectl get nodes
+                '''
             }
         }
 
@@ -42,20 +71,6 @@ pipeline {
                 }
             }
         }
-
-        stage('Verify Environment') {
-            steps {
-                sh '''
-                    echo "=== Docker ==="
-                    docker --version
-
-                    echo "=== AWS Identity ==="
-                    aws sts get-caller-identity
-
-                    echo "=== Kubernetes Nodes ==="
-                    kubectl get nodes
-                '''
-            }
-        }
     }
 }
+```
