@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -19,12 +18,12 @@ pipeline {
                     pwd
 
                     echo "=== Node ==="
-                    command -v node || true
-                    node --version || true
+                    command -v node
+                    node --version
 
                     echo "=== npm ==="
-                    command -v npm || true
-                    npm --version || true
+                    command -v npm
+                    npm --version
 
                     echo "=== Docker ==="
                     docker --version
@@ -68,6 +67,25 @@ pipeline {
                         echo "=== Frontend Build ==="
                         npm run build
                     '''
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    def scannerHome = tool 'SonarScanner'
+
+                    withSonarQubeEnv('SonarQube') {
+                        sh """
+                            echo "=== SonarQube Analysis ==="
+                            ${scannerHome}/bin/sonar-scanner \
+                                -Dsonar.projectKey=BlogReact \
+                                -Dsonar.projectName=BlogReact \
+                                -Dsonar.sources=backend/src,frontend/src \
+                                -Dsonar.sourceEncoding=UTF-8
+                        """
+                    }
                 }
             }
         }
