@@ -1,3 +1,4 @@
+```groovy
 pipeline {
     agent any
 
@@ -74,7 +75,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    def scannerHome = tool 'SonarScanner'
+                    def scannerHome = tool 'SonarQubeCLI'
 
                     withSonarQubeEnv('SonarQube') {
                         sh """
@@ -91,3 +92,4 @@ pipeline {
         }
     }
 }
+```
