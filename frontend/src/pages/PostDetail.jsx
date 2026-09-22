@@ -16,7 +16,6 @@ export default function PostDetail() {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
   const submitComment = async (e) => {
