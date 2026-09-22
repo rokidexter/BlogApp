@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -98,6 +97,24 @@ pipeline {
                 }
             }
         }
+
+        stage('Docker Build') {
+            steps {
+                sh '''
+                    echo "=== Building Backend Docker Image ==="
+                    docker build \
+                        -t blogapp-backend:${BUILD_NUMBER} \
+                        ./backend
+
+                    echo "=== Building Frontend Docker Image ==="
+                    docker build \
+                        -t blogapp-frontend:${BUILD_NUMBER} \
+                        ./frontend
+
+                    echo "=== Docker Images Created ==="
+                    docker images | grep -E "blogapp-backend|blogapp-frontend"
+                '''
+            }
+        }
     }
 }
-
