@@ -80,14 +80,21 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    sh '''
-                        echo "=== SonarQube Analysis ==="
-                        sonar-scanner \
-                            -Dsonar.projectKey=BlogReact \
-                            -Dsonar.projectName=BlogReact \
-                            -Dsonar.sources=backend/src,frontend/src \
-                            -Dsonar.host.url=http://localhost:9000
-                    '''
+                    withEnv(["PATH+SONAR=${tool 'SonarQubeCLI'}/bin"]) {
+                        sh '''
+                            echo "=== SonarQube Analysis ==="
+
+                            echo "=== SonarScanner Version ==="
+                            sonar-scanner --version
+
+                            echo "=== Running SonarQube Scanner ==="
+                            sonar-scanner \
+                                -Dsonar.projectKey=BlogReact \
+                                -Dsonar.projectName=BlogReact \
+                                -Dsonar.sources=backend/src,frontend/src \
+                                -Dsonar.host.url=http://localhost:9000
+                        '''
+                    }
                 }
             }
         }
@@ -104,16 +111,19 @@ pipeline {
             steps {
                 sh '''
                     echo "=== Building Backend Docker Image ==="
+
                     docker build \
                         -t blogapp-backend:${BUILD_NUMBER} \
                         ./backend
 
                     echo "=== Building Frontend Docker Image ==="
+
                     docker build \
                         -t blogapp-frontend:${BUILD_NUMBER} \
                         ./frontend
 
                     echo "=== Docker Images ==="
+
                     docker images | grep blogapp
                 '''
             }
@@ -129,11 +139,13 @@ pipeline {
                     trivy --version
 
                     echo "=== Scanning Backend Image ==="
+
                     trivy image \
                         --severity HIGH,CRITICAL \
                         blogapp-backend:${BUILD_NUMBER}
 
                     echo "=== Scanning Frontend Image ==="
+
                     trivy image \
                         --severity HIGH,CRITICAL \
                         blogapp-frontend:${BUILD_NUMBER}
@@ -184,6 +196,7 @@ pipeline {
             steps {
                 sh '''
                     echo "=== EKS Cluster ==="
+
                     kubectl config current-context
 
                     echo "=== Updating Backend Deployment ==="
