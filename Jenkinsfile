@@ -1,3 +1,4 @@
+```groovy
 pipeline {
     agent any
 
@@ -27,6 +28,9 @@ pipeline {
 
                     echo "=== Docker ==="
                     docker --version
+
+                    echo "=== Trivy ==="
+                    trivy --version
 
                     echo "=== AWS Identity ==="
                     aws sts get-caller-identity
@@ -116,5 +120,25 @@ pipeline {
                 '''
             }
         }
+
+        stage('Trivy Security Scan') {
+            steps {
+                sh '''
+                    echo "=== Trivy Version ==="
+                    trivy --version
+
+                    echo "=== Trivy Backend Image Scan ==="
+                    trivy image \
+                        --severity HIGH,CRITICAL \
+                        blogapp-backend:${BUILD_NUMBER}
+
+                    echo "=== Trivy Frontend Image Scan ==="
+                    trivy image \
+                        --severity HIGH,CRITICAL \
+                        blogapp-frontend:${BUILD_NUMBER}
+                '''
+            }
+        }
     }
 }
+```
