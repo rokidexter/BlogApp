@@ -1,11 +1,20 @@
 
 pipeline {
+
     agent any
+
+    environment {
+        AWS_REGION = 'ap-south-1'
+
+        BACKEND_IMAGE = '382170164329.dkr.ecr.ap-south-1.amazonaws.com/blogapp-backend'
+        FRONTEND_IMAGE = '382170164329.dkr.ecr.ap-south-1.amazonaws.com/blogapp-frontend'
+    }
 
     stages {
 
         stage('Checkout') {
             steps {
+                echo '=== Checking out source code ==='
                 checkout scm
             }
         }
@@ -13,23 +22,16 @@ pipeline {
         stage('Verify Environment') {
             steps {
                 sh '''
-                    echo "=== Jenkins Shell ==="
-                    echo "PATH=$PATH"
-                    whoami
-                    pwd
-
-                    echo "=== Node ==="
-                    command -v node
+                    echo "=== Node Version ==="
                     node --version
 
-                    echo "=== npm ==="
-                    command -v npm
+                    echo "=== NPM Version ==="
                     npm --version
 
-                    echo "=== Docker ==="
+                    echo "=== Docker Version ==="
                     docker --version
 
-                    echo "=== Trivy ==="
+                    echo "=== Trivy Version ==="
                     trivy --version
 
                     echo "=== AWS Identity ==="
@@ -45,7 +47,7 @@ pipeline {
             steps {
                 dir('backend') {
                     sh '''
-                        echo "=== Installing backend dependencies ==="
+                        echo "=== Installing Backend Dependencies ==="
                         npm ci
 
                         echo "=== Backend Lint ==="
@@ -62,7 +64,7 @@ pipeline {
             steps {
                 dir('frontend') {
                     sh '''
-                        echo "=== Installing frontend dependencies ==="
+                        echo "=== Installing Frontend Dependencies ==="
                         npm ci
 
                         echo "=== Frontend Lint ==="
@@ -77,26 +79,22 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                script {
-                    def scannerHome = tool 'SonarQubeCLI'
-
-                    withSonarQubeEnv('SonarQube') {
-                        sh """
-                            echo "=== SonarQube Analysis ==="
-                            ${scannerHome}/bin/sonar-scanner \
-                                -Dsonar.projectKey=BlogReact \
-                                -Dsonar.projectName=BlogReact \
-                                -Dsonar.sources=backend/src,frontend/src \
-                                -Dsonar.sourceEncoding=UTF-8
-                        """
-                    }
+                withSonarQubeEnv('SonarQube') {
+                    sh '''
+                        echo "=== SonarQube Analysis ==="
+                        sonar-scanner \
+                            -Dsonar.projectKey=BlogReact \
+                            -Dsonar.projectName=BlogReact \
+                            -Dsonar.sources=backend/src,frontend/src \
+                            -Dsonar.host.url=http://localhost:9000
+                    '''
                 }
             }
         }
 
         stage('SonarQube Quality Gate') {
             steps {
-                timeout(time: 10, unit: 'MINUTES') {
+                timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
             }
@@ -115,26 +113,27 @@ pipeline {
                         -t blogapp-frontend:${BUILD_NUMBER} \
                         ./frontend
 
-                    echo "=== Docker Images Created ==="
-                    docker images | grep -E "blogapp-backend|blogapp-frontend"
+                    echo "=== Docker Images ==="
+                    docker images | grep blogapp
                 '''
             }
         }
 
+        // Trivy performs container image vulnerability scanning.
+        // It checks the Docker images for known HIGH and CRITICAL vulnerabilities.
+        // The scan runs after Docker image creation and before pushing images to ECR.
         stage('Trivy Security Scan') {
             steps {
                 sh '''
                     echo "=== Trivy Version ==="
                     trivy --version
 
-                    # Scan backend image for HIGH and CRITICAL vulnerabilities
-                    echo "=== Trivy Backend Image Scan ==="
+                    echo "=== Scanning Backend Image ==="
                     trivy image \
                         --severity HIGH,CRITICAL \
                         blogapp-backend:${BUILD_NUMBER}
 
-                    # Scan frontend image for HIGH and CRITICAL vulnerabilities
-                    echo "=== Trivy Frontend Image Scan ==="
+                    echo "=== Scanning Frontend Image ==="
                     trivy image \
                         --severity HIGH,CRITICAL \
                         blogapp-frontend:${BUILD_NUMBER}
@@ -145,33 +144,36 @@ pipeline {
         stage('ECR Push') {
             steps {
                 sh '''
-                    echo "=== AWS Account ==="
-                    aws sts get-caller-identity
-
                     echo "=== ECR Login ==="
-                    aws ecr get-login-password --region ap-south-1 | \
-                        docker login \
+
+                    aws ecr get-login-password \
+                        --region ${AWS_REGION} | \
+                    docker login \
                         --username AWS \
                         --password-stdin \
                         382170164329.dkr.ecr.ap-south-1.amazonaws.com
 
                     echo "=== Tagging Backend Image ==="
+
                     docker tag \
                         blogapp-backend:${BUILD_NUMBER} \
-                        382170164329.dkr.ecr.ap-south-1.amazonaws.com/blogapp-backend:${BUILD_NUMBER}
+                        ${BACKEND_IMAGE}:${BUILD_NUMBER}
 
                     echo "=== Tagging Frontend Image ==="
+
                     docker tag \
                         blogapp-frontend:${BUILD_NUMBER} \
-                        382170164329.dkr.ecr.ap-south-1.amazonaws.com/blogapp-frontend:${BUILD_NUMBER}
+                        ${FRONTEND_IMAGE}:${BUILD_NUMBER}
 
                     echo "=== Pushing Backend Image ==="
+
                     docker push \
-                        382170164329.dkr.ecr.ap-south-1.amazonaws.com/blogapp-backend:${BUILD_NUMBER}
+                        ${BACKEND_IMAGE}:${BUILD_NUMBER}
 
                     echo "=== Pushing Frontend Image ==="
+
                     docker push \
-                        382170164329.dkr.ecr.ap-south-1.amazonaws.com/blogapp-frontend:${BUILD_NUMBER}
+                        ${FRONTEND_IMAGE}:${BUILD_NUMBER}
 
                     echo "=== ECR Push Completed ==="
                 '''
@@ -185,36 +187,56 @@ pipeline {
                     kubectl config current-context
 
                     echo "=== Updating Backend Deployment ==="
+
                     kubectl set image deployment/blogapp-backend \
-                        blogapp-backend=382170164329.dkr.ecr.ap-south-1.amazonaws.com/blogapp-backend:${BUILD_NUMBER}
+                        backend=${BACKEND_IMAGE}:${BUILD_NUMBER}
 
                     echo "=== Updating Frontend Deployment ==="
+
                     kubectl set image deployment/blogapp-frontend \
-                        blogapp-frontend=382170164329.dkr.ecr.ap-south-1.amazonaws.com/blogapp-frontend:${BUILD_NUMBER}
+                        frontend=${FRONTEND_IMAGE}:${BUILD_NUMBER}
 
                     echo "=== Waiting for Backend Rollout ==="
+
                     kubectl rollout status deployment/blogapp-backend \
                         --timeout=5m
 
                     echo "=== Waiting for Frontend Rollout ==="
+
                     kubectl rollout status deployment/blogapp-frontend \
                         --timeout=5m
 
                     echo "=== Backend Image ==="
+
                     kubectl get deployment blogapp-backend \
                         -o jsonpath='{.spec.template.spec.containers[0].image}{"\\n"}'
 
                     echo "=== Frontend Image ==="
+
                     kubectl get deployment blogapp-frontend \
                         -o jsonpath='{.spec.template.spec.containers[0].image}{"\\n"}'
 
                     echo "=== Running Pods ==="
+
                     kubectl get pods
 
                     echo "=== Services ==="
+
                     kubectl get svc
+
+                    echo "=== EKS Deployment Completed ==="
                 '''
             }
+        }
+    }
+
+    post {
+        success {
+            echo '=== CI/CD Pipeline Completed Successfully ==='
+        }
+
+        failure {
+            echo '=== CI/CD Pipeline Failed ==='
         }
     }
 }
