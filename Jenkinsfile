@@ -139,6 +139,42 @@ pipeline {
                 '''
             }
         }
+
+        stage('ECR Push') {
+            steps {
+                sh '''
+                    echo "=== AWS Account ==="
+                    aws sts get-caller-identity
+
+                    echo "=== ECR Login ==="
+                    aws ecr get-login-password --region ap-south-1 | \
+                        docker login \
+                        --username AWS \
+                        --password-stdin \
+                        382170164329.dkr.ecr.ap-south-1.amazonaws.com
+
+                    echo "=== Tagging Backend Image ==="
+                    docker tag \
+                        blogapp-backend:${BUILD_NUMBER} \
+                        382170164329.dkr.ecr.ap-south-1.amazonaws.com/blogapp-backend:${BUILD_NUMBER}
+
+                    echo "=== Tagging Frontend Image ==="
+                    docker tag \
+                        blogapp-frontend:${BUILD_NUMBER} \
+                        382170164329.dkr.ecr.ap-south-1.amazonaws.com/blogapp-frontend:${BUILD_NUMBER}
+
+                    echo "=== Pushing Backend Image ==="
+                    docker push \
+                        382170164329.dkr.ecr.ap-south-1.amazonaws.com/blogapp-backend:${BUILD_NUMBER}
+
+                    echo "=== Pushing Frontend Image ==="
+                    docker push \
+                        382170164329.dkr.ecr.ap-south-1.amazonaws.com/blogapp-frontend:${BUILD_NUMBER}
+
+                    echo "=== ECR Push Completed ==="
+                '''
+            }
+        }
     }
 }
 
