@@ -1,158 +1,185 @@
 # Production-Level Three-Tier Blog Application CI/CD Deployment on Amazon EKS
 
-A production-oriented DevOps implementation of a three-tier Blog Application deployed on **Amazon Elastic Kubernetes Service (EKS)** with an automated **CI/CD and DevSecOps pipeline**.
+A production-oriented DevOps and DevSecOps implementation of a three-tier Blog Application deployed on **Amazon Elastic Kubernetes Service (EKS)** with an automated **Jenkins CI/CD pipeline**.
 
-The project demonstrates containerization, Kubernetes orchestration, automated CI/CD, code-quality analysis, vulnerability scanning, artifact management, monitoring, logging, networking controls, secrets management, and security practices.
+The project demonstrates:
+
+* GitHub-based source control
+* Jenkins CI/CD automation
+* SonarQube static code analysis
+* SonarQube Quality Gate enforcement
+* Docker containerization
+* Trivy container vulnerability scanning
+* Amazon ECR image management
+* Amazon EKS deployment
+* Kubernetes rolling deployments
+* Kubernetes Secrets
+* Kubernetes NetworkPolicy
+* MySQL StatefulSet
+* Persistent storage using AWS EBS CSI
+* Prometheus and Grafana monitoring
+* Alertmanager
+* Kubernetes health probes
+* Resource requests and limits
+* Non-root container execution
+* Kubernetes troubleshooting and validation
 
 ---
 
-## 🚀 Project Overview
+# 🚀 1. Project Overview
 
-This project takes a full-stack Blog Application and deploys it as a containerized three-tier application on Amazon EKS.
+The application is a three-tier web application consisting of:
 
-The application consists of:
+```text
+Frontend
+React + Nginx
+     │
+     ▼
+Backend
+Node.js + Express
+     │
+     ▼
+Database
+MySQL
+```
 
-* **Frontend** — React-based web application
-* **Backend** — Node.js/Express REST API
-* **Database** — MySQL
+The complete application is containerized and deployed on an Amazon EKS cluster.
 
-The deployment is automated through a Jenkins-based CI/CD pipeline.
-
-The overall workflow is:
+The CI/CD workflow is:
 
 ```text
 Developer
     │
     ▼
-   GitHub
+ GitHub
     │
     ▼
-  Jenkins
+ Jenkins
     │
     ├── Checkout
+    │
+    ├── Environment Verification
+    │
+    ├── Backend Build & Test
+    │
+    ├── Frontend Build
+    │
     ├── SonarQube Analysis
-    ├── Build & Test
+    │
+    ├── SonarQube Quality Gate
+    │
     ├── Docker Build
+    │
     ├── Trivy Security Scan
-    ├── Nexus Artifact Management
+    │
+    ├── Amazon ECR Push
+    │
     └── Deploy to Amazon EKS
              │
              ▼
-        Amazon EKS
-        ┌───────────────┐
-        │   Frontend    │
-        │   React/Nginx │
-        └───────┬───────┘
-                │
-                ▼
-        ┌───────────────┐
-        │    Backend    │
-        │ Node.js/API   │
-        └───────┬───────┘
-                │
-                ▼
-        ┌───────────────┐
-        │     MySQL     │
-        └───────────────┘
+       ┌───────────────┐
+       │    Frontend   │
+       │ React + Nginx │
+       └───────┬───────┘
+               │
+               ▼
+       ┌───────────────┐
+       │    Backend    │
+       │ Node + Express│
+       └───────┬───────┘
+               │
+               ▼
+       ┌───────────────┐
+       │     MySQL     │
+       │  StatefulSet  │
+       └───────────────┘
 
-        Monitoring
-        ┌────────────────────┐
-        │ Prometheus         │
-        │ Grafana            │
-        │ Alertmanager       │
-        │ Node Exporter      │
-        │ kube-state-metrics │
-        └────────────────────┘
+             Monitoring
+                 │
+        ┌────────┴────────┐
+        ▼                 ▼
+   Prometheus          Grafana
+        │
+        ▼
+   Alertmanager
 ```
 
 ---
 
-# 📌 Project Objectives
-
-The main objectives of this project were to implement a production-oriented DevOps workflow covering:
-
-* Source code management
-* CI/CD automation
-* Docker containerization
-* Container image management
-* Kubernetes deployment
-* Amazon EKS orchestration
-* Infrastructure and workload security
-* Static code analysis
-* Container vulnerability scanning
-* Artifact management
-* Application monitoring
-* Kubernetes monitoring
-* Centralized/Kubernetes-based logging
-* Secure secret management
-* Network isolation
-* Production-oriented deployment practices
-
----
-
-# 🏗️ Architecture
+# 🏗️ 2. Architecture
 
 ```text
-                         ┌─────────────────┐
-                         │     GitHub      │
-                         │ Source Control  │
-                         └────────┬────────┘
-                                  │
-                                  ▼
-                         ┌─────────────────┐
-                         │     Jenkins     │
-                         │   CI/CD Server  │
-                         └────────┬────────┘
-                                  │
-              ┌──────────────────┼──────────────────┐
-              │                  │                  │
-              ▼                  ▼                  ▼
-         SonarQube             Trivy             Nexus
-        Code Quality       Security Scan      Artifact Mgmt
-              │                  │                  │
-              └──────────────────┼──────────────────┘
-                                 │
-                                 ▼
-                         ┌─────────────────┐
-                         │  Amazon ECR     │
-                         │ Container Image │
-                         │    Registry     │
-                         └────────┬────────┘
-                                  │
-                                  ▼
-                    ┌─────────────────────────┐
-                    │      Amazon EKS         │
-                    │                         │
-                    │ ┌─────────────────────┐ │
-                    │ │ Frontend Deployment │ │
-                    │ │ React + Nginx       │ │
-                    │ └──────────┬──────────┘ │
-                    │            │             │
-                    │            ▼             │
-                    │ ┌─────────────────────┐ │
-                    │ │ Backend Deployment  │ │
-                    │ │ Node.js / Express   │ │
-                    │ └──────────┬──────────┘ │
-                    │            │             │
-                    │            ▼             │
-                    │ ┌─────────────────────┐ │
-                    │ │ MySQL StatefulSet   │ │
-                    │ └─────────────────────┘ │
-                    │                         │
-                    └────────────┬────────────┘
-                                 │
-                  ┌──────────────┴──────────────┐
-                  │                             │
-                  ▼                             ▼
-          ┌───────────────┐             ┌───────────────┐
-          │  Prometheus   │             │    Grafana    │
-          │   Monitoring  │             │ Visualization │
-          └───────────────┘             └───────────────┘
+                         ┌─────────────────────┐
+                         │       GitHub        │
+                         │  Source Repository  │
+                         └──────────┬──────────┘
+                                    │
+                                    │ Webhook
+                                    ▼
+                         ┌─────────────────────┐
+                         │       Jenkins       │
+                         │     CI/CD Server    │
+                         └──────────┬──────────┘
+                                    │
+             ┌──────────────────────┼─────────────────────┐
+             │                      │                     │
+             ▼                      ▼                     ▼
+        SonarQube                Docker                 Trivy
+       Code Analysis             Build              Vulnerability
+       Quality Gate                                    Scan
+             │                      │                     │
+             └──────────────────────┼─────────────────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │     Amazon ECR      │
+                         │ Container Registry  │
+                         └──────────┬──────────┘
+                                    │
+                                    │ Pull Images
+                                    ▼
+                    ┌─────────────────────────────┐
+                    │         Amazon EKS          │
+                    │                             │
+                    │  ┌───────────────────────┐  │
+                    │  │ Frontend Deployment   │  │
+                    │  │ React + Nginx          │  │
+                    │  │ 2 Replicas             │  │
+                    │  └───────────┬───────────┘  │
+                    │              │              │
+                    │              ▼              │
+                    │  ┌───────────────────────┐  │
+                    │  │ Backend Deployment    │  │
+                    │  │ Node.js + Express     │  │
+                    │  │ 2 Replicas             │  │
+                    │  └───────────┬───────────┘  │
+                    │              │              │
+                    │              ▼              │
+                    │  ┌───────────────────────┐  │
+                    │  │ MySQL StatefulSet     │  │
+                    │  │ 1 Replica             │  │
+                    │  │ Persistent EBS Volume │  │
+                    │  └───────────────────────┘  │
+                    │                             │
+                    └──────────────┬──────────────┘
+                                   │
+                     ┌─────────────┴─────────────┐
+                     │                           │
+                     ▼                           ▼
+              ┌──────────────┐           ┌──────────────┐
+              │  Prometheus  │           │   Grafana    │
+              │  Monitoring  │           │ Visualization│
+              └──────┬───────┘           └──────────────┘
+                     │
+                     ▼
+              ┌──────────────┐
+              │ Alertmanager │
+              └──────────────┘
 ```
 
 ---
 
-# 🧰 Technology Stack
+# 🧰 3. Technology Stack
 
 ## Application
 
@@ -162,9 +189,9 @@ The main objectives of this project were to implement a production-oriented DevO
 | Web Server    | Nginx      |
 | Backend       | Node.js    |
 | API Framework | Express.js |
-| Database      | MySQL      |
+| Database      | MySQL 8.0  |
 
-## DevOps
+## DevOps / DevSecOps
 
 | Area                  | Technology         |
 | --------------------- | ------------------ |
@@ -175,56 +202,62 @@ The main objectives of this project were to implement a production-oriented DevO
 | Kubernetes            | Amazon EKS         |
 | Cloud                 | AWS                |
 | Code Quality          | SonarQube          |
+| Quality Gate          | SonarQube          |
 | Vulnerability Scanner | Trivy              |
-| Artifact Repository   | Nexus              |
 | Monitoring            | Prometheus         |
 | Visualization         | Grafana            |
 | Alerting              | Alertmanager       |
 | Kubernetes Metrics    | kube-state-metrics |
 | Node Metrics          | Node Exporter      |
+| Persistent Storage    | AWS EBS CSI        |
+| Database              | MySQL StatefulSet  |
+
+> **Nexus is not used in this implementation.**
+>
+> Docker images are pushed directly from Jenkins to Amazon ECR.
 
 ---
 
-# 📁 Project Structure
-
-A simplified structure of the project is:
+# 📁 4. Repository Structure
 
 ```text
 BlogReact/
 │
-├── frontend/
-│   ├── Dockerfile
-│   ├── package.json
-│   └── src/
-│
 ├── backend/
 │   ├── Dockerfile
 │   ├── package.json
+│   ├── package-lock.json
+│   └── src/
+│
+├── frontend/
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── package-lock.json
+│   └── src/
+│
+├── database/
 │   └── ...
 │
-├── k8s/
-│   ├── frontend-deployment.yaml
-│   ├── frontend-service.yaml
-│   ├── backend-deployment.yaml
-│   ├── backend-service.yaml
-│   ├── mysql-statefulset.yaml
-│   ├── mysql-service.yaml
-│   ├── mysql-secret.yaml
-│   └── network-policy.yaml
-│
 ├── Jenkinsfile
-├── Dockerfile
-├── README.md
-└── ...
+│
+├── backend.yaml
+├── frontend.yaml
+├── mysql.yaml
+├── mysql-networkpolicy.yaml
+├── k8s-mysql-storageclass.yaml
+│
+└── README.md
 ```
 
-> The exact directory structure can vary according to the final repository state.
+The repository contains the application source code, Dockerfiles, Jenkins pipeline, and Kubernetes deployment manifests.
 
 ---
 
-# 🔄 CI/CD Pipeline
+# 🔄 5. CI/CD Pipeline
 
-The Jenkins pipeline automates the application delivery process.
+The Jenkins pipeline is implemented as a Declarative Pipeline.
+
+The actual pipeline flow is:
 
 ```text
 GitHub
@@ -233,93 +266,149 @@ GitHub
 Checkout
    │
    ▼
+Verify Environment
+   │
+   ▼
+Backend Build & Test
+   │
+   ▼
+Frontend Build
+   │
+   ▼
 SonarQube Analysis
    │
    ▼
-Build & Test
+SonarQube Quality Gate
    │
    ▼
 Docker Build
    │
    ▼
-Trivy Scan
+Trivy Security Scan
    │
    ▼
-Nexus / Artifact Handling
+Amazon ECR Push
    │
    ▼
-Amazon ECR
+Amazon EKS Deployment
    │
    ▼
-Amazon EKS
-   │
-   ▼
-Deployment Validation
-   │
-   ▼
-Monitoring
+Rollout Validation
 ```
+
+The Jenkins pipeline currently performs these stages directly.
 
 ---
 
-# 1️⃣ Source Code Management
+# 6. GitHub Source Control
 
-GitHub is used as the source-code repository.
+GitHub is used as the central source-code repository.
 
-The repository provides version control for:
+It contains:
 
-* Frontend source code
-* Backend source code
+* React frontend
+* Node.js backend
 * Dockerfiles
 * Kubernetes manifests
-* Jenkins pipeline configuration
-* Configuration files
+* Jenkinsfile
+* MySQL configuration
+* NetworkPolicy
+* StorageClass
 * Documentation
 
-Example:
-
-```bash
-git clone <repository-url>
-cd BlogReact
-```
+Jenkins checks out the repository at the beginning of the pipeline.
 
 ---
 
-# 2️⃣ Jenkins CI/CD
+# 🔨 7. Jenkins CI/CD
 
-Jenkins acts as the automation engine for the project.
+Jenkins is the automation engine for the complete application delivery process.
 
-The pipeline is responsible for automating the build, testing, security, packaging, and deployment workflow.
-
-Typical stages include:
+The pipeline begins with:
 
 ```text
-Checkout
-    ↓
-SonarQube
-    ↓
-Build & Test
-    ↓
-Docker Build
-    ↓
-Trivy Scan
-    ↓
-Push Image
-    ↓
-Deploy to EKS
-    ↓
-Validation
+GitHub
+   │
+   ▼
+Jenkins
+   │
+   ▼
+Checkout Source Code
 ```
 
-This reduces manual deployment steps and provides a repeatable application delivery process.
+The Jenkinsfile also verifies the environment before building:
+
+```text
+Node.js
+npm
+Docker
+Trivy
+AWS Identity
+Kubernetes Cluster
+```
+
+This ensures that the Jenkins agent has the required tools and AWS/EKS access before continuing.
 
 ---
 
-# 3️⃣ SonarQube Code Quality
+# 🧪 8. Backend Build & Test
 
-SonarQube is integrated into the CI pipeline for static code analysis.
+The backend pipeline performs:
 
-The purpose of SonarQube is to identify issues such as:
+```text
+npm ci
+   │
+   ▼
+npm run lint
+   │
+   ▼
+npm test
+```
+
+`npm ci` installs the exact dependency versions defined by the lock file.
+
+`npm run lint` checks code quality and formatting issues.
+
+`npm test` executes the backend test suite.
+
+If these stages fail, Jenkins stops the pipeline.
+
+---
+
+# 🖥️ 9. Frontend Build
+
+The frontend pipeline performs:
+
+```text
+npm ci
+   │
+   ▼
+npm run lint
+   │
+   ▼
+npm run build
+```
+
+This validates the frontend source code and produces the production build.
+
+A failed frontend build causes the Jenkins pipeline to fail.
+
+---
+
+# 🔍 10. SonarQube Code Analysis
+
+SonarQube is used for static code analysis.
+
+Jenkins runs the SonarQube Scanner against:
+
+```text
+backend/src
+frontend/src
+```
+
+The scanner sends the source-code analysis data to the SonarQube server.
+
+SonarQube evaluates the project for issues such as:
 
 * Bugs
 * Vulnerabilities
@@ -328,322 +417,505 @@ The purpose of SonarQube is to identify issues such as:
 * Maintainability issues
 * Reliability issues
 
-The Jenkins pipeline sends the source code to SonarQube for analysis.
+The analysis results are displayed in the SonarQube web interface.
 
-The SonarQube server performs the analysis and displays the results through its web interface.
-
-A Quality Gate can then be used to determine whether the code meets the configured quality requirements.
+The Jenkins pipeline then waits for the SonarQube Quality Gate.
 
 ```text
 Jenkins
    │
-   │ Source Code
+   │ Source Analysis
    ▼
 SonarQube
    │
    ├── Bugs
    ├── Vulnerabilities
    ├── Code Smells
-   ├── Coverage
+   ├── Coverage / Metrics
    └── Quality Gate
+           │
+           ▼
+      Pass / Fail
 ```
+
+The Jenkinsfile uses:
+
+```text
+waitForQualityGate abortPipeline: true
+```
+
+Therefore, a failed Quality Gate prevents the pipeline from proceeding to the Docker build.
 
 ---
 
-# 4️⃣ Docker Containerization
+# 🐳 11. Docker Containerization
 
-The application components are containerized independently.
+The frontend and backend are containerized separately.
 
 ## Frontend
 
-The frontend uses a multi-stage Docker build:
+The frontend Dockerfile packages the React application into a production Nginx container.
 
 ```text
-Node.js
-   ↓
-Build React Application
-   ↓
+React Source
+     │
+     ▼
+Docker Build
+     │
+     ▼
+Frontend Image
+     │
+     ▼
 Nginx
-   ↓
-Production Container
 ```
 
-The production frontend container runs using the non-root `nginx` user.
+The frontend container is configured to run as a non-root user.
 
 ## Backend
 
-The backend is packaged into a Node.js production container.
+The Node.js/Express backend is packaged into its own Docker image.
 
-The production container runs using the non-root `nodeuser` user.
+```text
+Node.js Application
+        │
+        ▼
+    Docker Build
+        │
+        ▼
+ Backend Container
+```
 
-This reduces the privileges available to the application process inside the container.
+The backend container also uses non-root execution.
 
 ---
 
-# 5️⃣ Amazon ECR
+# 🛡️ 12. Trivy Security Scan
 
-Amazon Elastic Container Registry is used to store Docker images.
+After Docker images are built, Jenkins runs Trivy before pushing the images to Amazon ECR.
 
-The pipeline builds the application images and pushes them to ECR.
+The pipeline scans:
 
-Example workflow:
+```text
+blogapp-backend:<BUILD_NUMBER>
+blogapp-frontend:<BUILD_NUMBER>
+```
+
+The current Jenkins pipeline scans for:
+
+```text
+HIGH
+CRITICAL
+```
+
+severity vulnerabilities.
+
+Pipeline flow:
 
 ```text
 Docker Build
-     ↓
-Docker Tag
-     ↓
-ECR Login
-     ↓
-Docker Push
-     ↓
-Amazon ECR
+     │
+     ▼
+Trivy Scan
+     │
+     ├── Backend Image
+     │
+     └── Frontend Image
+     │
+     ▼
+Amazon ECR Push
 ```
 
-Images can then be pulled by the EKS workloads during deployment.
+This places the container vulnerability scan before the registry push.
+
+Trivy is a vulnerability/security scanner capable of scanning container images and other targets.
 
 ---
 
-# 6️⃣ Trivy Security Scanning
+# ☁️ 13. Amazon ECR
 
-Trivy is integrated into the CI/CD workflow to scan container images for vulnerabilities.
+Amazon Elastic Container Registry is used as the Docker image registry.
 
-Example:
+The Jenkins pipeline:
 
-```bash
-trivy image <image-name>
-```
+1. Authenticates with ECR
+2. Tags the backend image
+3. Tags the frontend image
+4. Pushes both images to ECR
 
-The scan can identify vulnerabilities in:
-
-* Operating system packages
-* Application dependencies
-* Container images
-
-This provides an additional security validation step before deployment.
-
----
-
-# 7️⃣ Nexus Repository
-
-Nexus is used as part of the artifact-management workflow.
-
-It provides centralized storage and management of build artifacts and packages.
-
-The general DevOps flow is:
+The repositories are:
 
 ```text
-Build
-  ↓
-Artifact
-  ↓
-Nexus
-  ↓
-Deployment Pipeline
+blogapp-backend
+blogapp-frontend
 ```
+
+The image tag is generated using the Jenkins:
+
+```text
+BUILD_NUMBER
+```
+
+For example:
+
+```text
+blogapp-backend:35
+blogapp-frontend:35
+```
+
+The ECR image is then used by Kubernetes during deployment.
 
 ---
 
-# 8️⃣ Amazon EKS Deployment
+# ☸️ 14. Amazon EKS
 
 The application is deployed to an Amazon EKS cluster.
 
-The Kubernetes workloads include:
+The cluster currently contains two worker nodes.
+
+The main application workloads are:
 
 ```text
 Frontend Deployment
-Frontend Service
-
 Backend Deployment
-Backend Service
-
 MySQL StatefulSet
-MySQL Service
 ```
 
-The application workloads were verified using:
-
-```bash
-kubectl get pods -A
-```
-
-The deployed environment contains separate frontend and backend replicas along with the MySQL workload.
+The application uses Kubernetes Services for internal communication.
 
 ---
 
-# 9️⃣ Kubernetes Services
+# 🔄 15. Kubernetes Rolling Deployment
 
-Kubernetes Services provide stable networking between workloads.
+Both frontend and backend use Kubernetes `RollingUpdate`.
 
-The application follows:
+The current strategy is:
 
-```text
-Frontend
-   │
-   ▼
-Backend Service
-   │
-   ▼
-MySQL Service
+```yaml
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 0
 ```
 
-The backend communicates with MySQL using the Kubernetes service rather than directly depending on a pod IP.
-
----
-
-# 🔐 10️⃣ Secrets Management
-
-Sensitive configuration such as database credentials is handled using Kubernetes Secrets rather than hardcoding credentials directly into application source code.
-
-The application consumes secret values through Kubernetes configuration.
-
-Example concept:
+This configuration was introduced to avoid the additional temporary pod created by:
 
 ```text
-Kubernetes Secret
+maxSurge: 1
+```
+
+which was causing scheduling pressure on the two-node EKS cluster.
+
+The current backend manifest confirms:
+
+```text
+replicas: 2
+maxUnavailable: 1
+maxSurge: 0
+```
+
+The frontend uses the same strategy.
+
+The resulting update behavior is approximately:
+
+```text
+Old Replica 1
+Old Replica 2
+
        │
        ▼
-Backend Pod
+
+Terminate / replace one replica
+
        │
        ▼
-Database Connection
+
+New Replica becomes Ready
+
+       │
+       ▼
+
+Replace remaining old replica
 ```
 
-Secret values should never be committed to GitHub.
+This avoids creating an additional surge pod during the update.
 
 ---
 
-# 🔒 11️⃣ Kubernetes NetworkPolicy
+# ❤️ 16. Kubernetes Health Probes
 
-A Kubernetes NetworkPolicy was implemented to restrict database access.
+The backend deployment uses both liveness and readiness probes.
 
-The MySQL NetworkPolicy:
+## Backend Liveness
 
 ```text
-Pod Selector:
+/healthz
+```
+
+The liveness probe allows Kubernetes to determine whether the application container is still functioning.
+
+## Backend Readiness
+
+```text
+/readyz
+```
+
+The readiness probe determines whether the backend is ready to receive traffic.
+
+The backend deployment defines these probes together with CPU and memory requests/limits.
+
+The frontend also uses HTTP-based health checks.
+
+---
+
+# 📦 17. Kubernetes Resources
+
+The backend deployment uses:
+
+```text
+Replicas: 2
+
+Requests:
+  CPU:    100m
+  Memory: 256Mi
+
+Limits:
+  CPU:    500m
+  Memory: 512Mi
+```
+
+The frontend also runs with two replicas and defined resource requests and limits.
+
+Resource requests help Kubernetes make scheduling decisions, while limits restrict the maximum resources available to the container.
+
+---
+
+# 🗄️ 18. MySQL StatefulSet
+
+MySQL is deployed using a Kubernetes StatefulSet.
+
+```text
+MySQL StatefulSet
+       │
+       ├── 1 Replica
+       │
+       ├── MySQL 8.0
+       │
+       └── Persistent Storage
+```
+
+The current configuration uses:
+
+```text
+MySQL: 8.0
+Replicas: 1
+```
+
+The database receives its configuration from a Kubernetes Secret.
+
+The MySQL StatefulSet also defines startup, readiness, and liveness probes using `mysqladmin ping`.
+
+---
+
+# 💾 19. Persistent Storage with AWS EBS
+
+MySQL data is stored on persistent storage rather than relying on the container filesystem.
+
+A custom Kubernetes StorageClass named:
+
+```text
+mysql-gp3
+```
+
+is used.
+
+The StorageClass uses:
+
+```text
+Provisioner:
+ebs.csi.aws.com
+
+Volume Type:
+gp3
+
+Filesystem:
+ext4
+
+Binding Mode:
+WaitForFirstConsumer
+
+Reclaim Policy:
+Retain
+```
+
+The MySQL StatefulSet requests:
+
+```text
+10Gi
+```
+
+of persistent storage.
+
+Architecture:
+
+```text
+MySQL StatefulSet
+       │
+       ▼
+PersistentVolumeClaim
+       │
+       ▼
+AWS EBS CSI Driver
+       │
+       ▼
+GP3 EBS Volume
+```
+
+---
+
+# 🔐 20. Kubernetes Secrets
+
+Database credentials are stored using a Kubernetes Secret named:
+
+```text
+mysql-secret
+```
+
+The backend receives:
+
+```text
+DB_USER
+DB_PASSWORD
+DB_NAME
+```
+
+through Kubernetes Secret references.
+
+The backend does not directly hardcode these database credentials in the Deployment manifest.
+
+The MySQL StatefulSet also consumes the database configuration from the Secret.
+
+---
+
+# 🔒 21. Kubernetes NetworkPolicy
+
+A Kubernetes NetworkPolicy is used to restrict access to MySQL.
+
+The policy selects:
+
+```text
 app=mysql
+```
 
-Allowed Source:
+and permits ingress only from:
+
+```text
 app=blogapp-backend
+```
 
-Allowed Port:
+on:
+
+```text
 TCP 3306
 ```
 
 Therefore:
 
 ```text
-Frontend ─────X─────> MySQL
-
-Backend ────────────> MySQL :3306
+Frontend ───────X──────► MySQL
+                         ▲
+                         │
+Backend ────────────────►│
+                         │
+                       TCP 3306
 ```
 
-This provides network-level isolation for the database workload.
+The NetworkPolicy therefore limits database access to backend pods rather than allowing unrestricted pod-to-database traffic.
 
 ---
 
-# 🛡️ 12️⃣ Kubernetes RBAC
+# 👤 22. Non-Root Containers
 
-Kubernetes RBAC provides authorization controls for Kubernetes resources.
+The application containers are configured to run without root privileges.
 
-The project environment contains Kubernetes:
+This reduces the privileges available to the application process inside the container.
 
-* Roles
-* RoleBindings
-* ClusterRoles
-* ClusterRoleBindings
-
-RBAC is used by Kubernetes components and monitoring components to obtain the permissions required for their operation.
-
-The final environment was also inspected using:
-
-```bash
-kubectl auth whoami
-kubectl auth can-i <verb> <resource>
-```
-
----
-
-# 👤 13️⃣ Non-Root Containers
-
-Both application containers were configured to run as non-root users.
-
-## Backend
-
-```dockerfile
-USER nodeuser
-```
-
-## Frontend
-
-```dockerfile
-USER nginx
-```
-
-This reduces the privileges available to the processes inside the containers.
-
-Runtime verification can be performed with:
+Runtime verification can be performed using:
 
 ```bash
 kubectl exec <pod-name> -- id
 ```
 
----
-
-# 📊 14️⃣ Monitoring
-
-The project implements Kubernetes monitoring using the Prometheus and Grafana ecosystem.
-
-Monitoring components include:
-
-* Prometheus
-* Grafana
-* Alertmanager
-* kube-state-metrics
-* Node Exporter
-* Prometheus Operator
-
-The monitoring stack collects and visualizes:
-
-* Kubernetes cluster metrics
-* Node metrics
-* Pod metrics
-* Container metrics
-* Kubernetes object state
-* Application-related infrastructure metrics
+The expected result should show the configured non-root user rather than root.
 
 ---
 
-# 📈 Grafana Dashboards
+# 📊 23. Monitoring
 
-Grafana was configured with Kubernetes monitoring dashboards.
+The EKS environment contains a Prometheus/Grafana monitoring stack.
 
-Available dashboards include:
-
-* Kubernetes / API Server
-* Kubernetes / Compute Resources / Cluster
-* Kubernetes / Compute Resources / Namespace
-* Kubernetes / Compute Resources / Workloads
-* CoreDNS
-* etcd
-* Grafana Overview
-* Alertmanager Overview
-
-Example access:
+The monitoring components include:
 
 ```text
-http://<EC2-PUBLIC-IP>:3000
+Prometheus
+Grafana
+Alertmanager
+kube-state-metrics
+Node Exporter
+Prometheus Operator
+```
+
+Monitoring provides visibility into:
+
+* Cluster resources
+* Node resources
+* Pod resources
+* Container metrics
+* Kubernetes object states
+* Workload health
+
+---
+
+# 📈 24. Grafana
+
+Grafana is used to visualize Prometheus metrics.
+
+Dashboards can be used to monitor:
+
+* Kubernetes cluster resources
+* Node CPU and memory
+* Namespace resources
+* Pod resources
+* Workloads
+* CoreDNS
+* Kubernetes components
+* Alertmanager
+
+Architecture:
+
+```text
+EKS
+ │
+ ├── Node Exporter
+ │
+ ├── kube-state-metrics
+ │
+ └── Application / Kubernetes Metrics
+              │
+              ▼
+         Prometheus
+              │
+              ▼
+           Grafana
 ```
 
 ---
 
-# 🚨 15️⃣ Alerting
+# 🚨 25. Alertmanager
 
 Alertmanager is deployed as part of the monitoring stack.
 
-It works with Prometheus to handle configured alert rules.
-
-The architecture is:
+The general monitoring flow is:
 
 ```text
 Kubernetes Metrics
@@ -652,120 +924,36 @@ Kubernetes Metrics
    Prometheus
        │
        ▼
-  Alert Rules
+   Alert Rules
        │
        ▼
   Alertmanager
 ```
 
+Prometheus evaluates configured alert rules, while Alertmanager handles resulting alerts.
+
 ---
 
-# 📝 16️⃣ Logging
+# 📝 26. Kubernetes Logging and Troubleshooting
 
-Kubernetes-based application logging is used to troubleshoot application and deployment issues.
+Kubernetes commands are used to troubleshoot application issues.
 
-Logs can be inspected using:
+Useful commands include:
+
+```bash
+kubectl get pods -A
+```
+
+```bash
+kubectl describe pod <pod-name>
+```
 
 ```bash
 kubectl logs <pod-name>
 ```
 
-For example:
-
 ```bash
-kubectl logs <backend-pod>
-kubectl logs <frontend-pod>
-kubectl logs <mysql-pod>
-```
-
-Kubernetes workload information can also be inspected using:
-
-```bash
-kubectl describe pod <pod-name>
-kubectl get events
-```
-
-The logging workflow allows identification of:
-
-* Application errors
-* Container startup failures
-* Configuration problems
-* Deployment issues
-* Database connection problems
-* Kubernetes scheduling/runtime issues
-
----
-
-# 🔐 17️⃣ Security Controls
-
-The project demonstrates several production-oriented security controls.
-
-### AWS
-
-* IAM-based authentication
-* EKS IAM integration
-* EC2 IAM role
-* ECR authentication
-
-### Kubernetes
-
-* RBAC
-* NetworkPolicy
-* Kubernetes Secrets
-* Restricted database ingress
-* Workload-level access control
-
-### Containers
-
-* Non-root execution
-* Trivy vulnerability scanning
-* Minimal Alpine-based production images
-
-### Source Code
-
-* Credentials are not intentionally stored in source code
-* Secrets are managed separately from application source
-* CI/CD security checks are incorporated into the pipeline
-
----
-
-# ⚠️ IAM Security Note
-
-The current development environment uses the EC2 role:
-
-```text
-Project04-DevOps-EC2-Role
-```
-
-The role currently has broad AWS permissions, including:
-
-```text
-AdministratorAccess
-PowerUserAccess
-```
-
-The EKS access entry also currently uses:
-
-```text
-AmazonEKSClusterAdminPolicy
-```
-
-with cluster-wide scope.
-
-These permissions were used to operate and troubleshoot the development environment.
-
-For a production environment, these should be replaced with narrowly scoped IAM and EKS permissions based on the exact requirements of Jenkins and the deployment workflow.
-
-This distinction is important: **the project demonstrates security controls, but the current Jenkins/EC2 role is not a least-privilege configuration.**
-
----
-
-# 🩺 18️⃣ Health Checks
-
-The application workloads can be validated using Kubernetes commands such as:
-
-```bash
-kubectl get pods
+kubectl get events --sort-by='.lastTimestamp'
 ```
 
 ```bash
@@ -776,226 +964,471 @@ kubectl get deployments
 kubectl get services
 ```
 
+For deployment troubleshooting:
+
 ```bash
-kubectl describe pod <pod-name>
+kubectl rollout status deployment/blogapp-backend
 ```
 
-The application deployment uses Kubernetes health-check mechanisms where configured to help Kubernetes determine workload health.
+```bash
+kubectl rollout status deployment/blogapp-frontend
+```
+
+The project specifically used Kubernetes scheduling events to diagnose resource pressure during rolling deployments.
 
 ---
 
-# 🔄 19️⃣ Deployment Validation
+# 🔎 27. Deployment Validation
 
-After deployment, the environment can be validated using:
+After Jenkins updates the deployments, it waits for the rollout to complete.
 
-```bash
-kubectl get pods -A
-```
+Backend:
 
 ```bash
-kubectl get svc -A
+kubectl rollout status deployment/blogapp-backend --timeout=5m
 ```
+
+Frontend:
 
 ```bash
-kubectl get deployments -A
+kubectl rollout status deployment/blogapp-frontend --timeout=5m
 ```
+
+The pipeline also verifies:
 
 ```bash
-kubectl get nodes
+kubectl get deployment blogapp-backend
+kubectl get deployment blogapp-frontend
+kubectl get pods
+kubectl get svc
 ```
 
-A successful deployment should show the application pods in a healthy `Running` state.
+The Jenkins pipeline prints the deployed image after updating the deployments.
 
 ---
 
-# 🧪 20️⃣ Troubleshooting Workflow
+# 🔁 28. Actual Deployment Mechanism
 
-A basic troubleshooting workflow is:
+An important part of this project is that deployment is **Jenkins-driven**, not GitOps-driven.
+
+The Jenkins pipeline executes:
 
 ```text
-Application Issue
-       │
-       ▼
-Check Pods
-       │
-       ▼
-Check Pod Events
-       │
-       ▼
-Check Container Logs
-       │
-       ▼
-Check Service
-       │
-       ▼
-Check NetworkPolicy
-       │
-       ▼
-Check Configuration / Secrets
-       │
-       ▼
-Check Application Dependencies
+kubectl set image deployment/blogapp-backend
 ```
 
-Useful commands:
+and:
+
+```text
+kubectl set image deployment/blogapp-frontend
+```
+
+using the newly generated Jenkins build number.
+
+The actual flow is therefore:
+
+```text
+GitHub
+   │
+   ▼
+Jenkins
+   │
+   ├── Build
+   ├── Test
+   ├── SonarQube
+   ├── Quality Gate
+   ├── Docker Build
+   ├── Trivy
+   └── ECR Push
+          │
+          ▼
+      kubectl set image
+          │
+          ▼
+        EKS
+```
+
+There is currently **no Argo CD synchronization step** in this workflow.
+
+---
+
+# 🔐 29. Security Controls
+
+The project incorporates security controls at multiple layers.
+
+## Source Code
+
+* GitHub source control
+* SonarQube static analysis
+* SonarQube Quality Gate
+
+## Container Security
+
+* Non-root containers
+* Trivy vulnerability scanning
+* Separate frontend/backend images
+
+## AWS
+
+* IAM-based authentication
+* Amazon ECR authentication
+* EKS IAM integration
+
+## Kubernetes
+
+* Kubernetes Secrets
+* NetworkPolicy
+* Resource limits
+* Health probes
+* Non-root workloads
+
+---
+
+# 🧩 30. Why Amazon ECR Instead of Nexus?
+
+Amazon ECR is the image registry used by this project.
+
+The actual pipeline is:
+
+```text
+Docker Build
+     │
+     ▼
+Trivy Scan
+     │
+     ▼
+ECR Login
+     │
+     ▼
+Docker Tag
+     │
+     ▼
+Docker Push
+     │
+     ▼
+Amazon ECR
+```
+
+There is **no Nexus Repository stage**.
+
+Nexus is therefore intentionally **not part of the technology stack or architecture of this implementation**.
+
+---
+
+# ⚙️ 31. Jenkins Pipeline Stages
+
+The Jenkinsfile currently contains the following major stages:
+
+```text
+1. Checkout
+2. Verify Environment
+3. Backend Build & Test
+4. Frontend Build
+5. SonarQube Analysis
+6. SonarQube Quality Gate
+7. Docker Build
+8. Trivy Security Scan
+9. ECR Push
+10. EKS Deployment
+```
+
+The pipeline uses the Jenkins `BUILD_NUMBER` to version the Docker images.
+
+For example:
+
+```text
+Build #35
+
+blogapp-backend:35
+blogapp-frontend:35
+```
+
+---
+
+# 🏆 32. End-to-End Workflow
+
+The complete project workflow is:
+
+```text
+                         Developer
+                             │
+                             ▼
+                          GitHub
+                             │
+                         Webhook
+                             │
+                             ▼
+                         Jenkins
+                             │
+                             ▼
+                    Checkout Source Code
+                             │
+                             ▼
+                    Verify Environment
+                             │
+                 ┌───────────┴───────────┐
+                 ▼                       ▼
+          Backend Build             Frontend Build
+                 │                       │
+          npm ci / lint / test     npm ci / lint / build
+                 │                       │
+                 └───────────┬───────────┘
+                             ▼
+                        SonarQube
+                             │
+                             ▼
+                       Quality Gate
+                             │
+                       Pass / Fail
+                             │
+                             ▼
+                       Docker Build
+                             │
+                             ▼
+                       Trivy Scan
+                             │
+                             ▼
+                        Amazon ECR
+                             │
+                             ▼
+                     Amazon EKS
+                             │
+              ┌──────────────┼──────────────┐
+              ▼              ▼              ▼
+          Frontend        Backend         MySQL
+          2 replicas      2 replicas      StatefulSet
+                                             │
+                                             ▼
+                                        EBS Storage
+                             │
+                             ▼
+                      Prometheus / Grafana
+                             │
+                             ▼
+                        Monitoring
+```
+
+---
+
+# 📋 33. Project Components Summary
+
+| Component             | Purpose                                                  |
+| --------------------- | -------------------------------------------------------- |
+| GitHub                | Source code and configuration management                 |
+| Jenkins               | CI/CD automation                                         |
+| SonarQube             | Static code analysis                                     |
+| Quality Gate          | Controls pipeline progression based on SonarQube results |
+| Docker                | Application containerization                             |
+| Trivy                 | Container vulnerability scanning                         |
+| Amazon ECR            | Docker image registry                                    |
+| Amazon EKS            | Kubernetes platform                                      |
+| Kubernetes Deployment | Frontend/backend workload management                     |
+| Kubernetes Service    | Internal service discovery                               |
+| MySQL StatefulSet     | Database workload                                        |
+| Kubernetes Secret     | Database credentials                                     |
+| NetworkPolicy         | Database network isolation                               |
+| AWS EBS CSI           | Persistent database storage                              |
+| Prometheus            | Metrics collection                                       |
+| Grafana               | Metrics visualization                                    |
+| Alertmanager          | Alert management                                         |
+| kube-state-metrics    | Kubernetes object metrics                                |
+| Node Exporter         | Node-level metrics                                       |
+
+---
+
+# 🧪 34. Validation Commands
+
+Check nodes:
 
 ```bash
-kubectl get pods -A
+kubectl get nodes -o wide
 ```
 
-```bash
-kubectl logs <pod-name>
-```
+Check all application pods:
 
 ```bash
-kubectl describe pod <pod-name>
+kubectl get pods -o wide
 ```
+
+Check deployments:
+
+```bash
+kubectl get deployments
+```
+
+Check services:
 
 ```bash
 kubectl get svc
 ```
 
-```bash
-kubectl get networkpolicy
-```
+Check backend rollout:
 
 ```bash
-kubectl get events --sort-by=.lastTimestamp
+kubectl rollout status deployment/blogapp-backend --timeout=5m
+```
+
+Check frontend rollout:
+
+```bash
+kubectl rollout status deployment/blogapp-frontend --timeout=5m
+```
+
+Check backend image:
+
+```bash
+kubectl get deployment blogapp-backend \
+  -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+```
+
+Check frontend image:
+
+```bash
+kubectl get deployment blogapp-frontend \
+  -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+```
+
+Check events:
+
+```bash
+kubectl get events --sort-by='.lastTimestamp'
+```
+
+Check application logs:
+
+```bash
+kubectl logs <pod-name>
+```
+
+Check container user:
+
+```bash
+kubectl exec <pod-name> -- id
 ```
 
 ---
 
-# 🌐 21️⃣ Application Access
+# 📌 35. Key DevOps Concepts Demonstrated
 
-The deployed application is exposed through the AWS load-balancing/Kubernetes service configuration.
+This project demonstrates practical experience with:
 
-### Application
+### CI/CD
 
-```text
-http://<APPLICATION-LOAD-BALANCER-URL>
-```
+* Jenkins Declarative Pipeline
+* Automated builds
+* Automated testing
+* Automated security scanning
+* Automated Docker image publishing
+* Automated Kubernetes deployment
 
-Replace the placeholder with the currently active AWS Load Balancer DNS name.
+### DevSecOps
 
-> Do not hard-code an ephemeral load-balancer URL in the README if the infrastructure may be recreated.
-
----
-
-# 🔗 22️⃣ Repository
-
-### GitHub
-
-The repository containing the project source code and DevOps configuration:
-
-```text
-https://github.com/Vennilavanguvi/BlogReact
-```
-
----
-
-# 📋 23️⃣ Project Deliverables
-
-This project covers the following DevOps capabilities:
-
-| Capability              | Implementation                                   |
-| ----------------------- | ------------------------------------------------ |
-| Source Control          | Git / GitHub                                     |
-| CI/CD                   | Jenkins                                          |
-| Code Quality            | SonarQube                                        |
-| Containerization        | Docker                                           |
-| Image Registry          | Amazon ECR                                       |
-| Artifact Management     | Nexus                                            |
-| Vulnerability Scanning  | Trivy                                            |
-| Container Orchestration | Kubernetes                                       |
-| Managed Kubernetes      | Amazon EKS                                       |
-| Networking              | Kubernetes Services / NetworkPolicy              |
-| Secrets                 | Kubernetes Secrets                               |
-| Authorization           | Kubernetes RBAC                                  |
-| Monitoring              | Prometheus                                       |
-| Visualization           | Grafana                                          |
-| Alerting                | Alertmanager                                     |
-| Kubernetes Metrics      | kube-state-metrics                               |
-| Node Metrics            | Node Exporter                                    |
-| Logging                 | Kubernetes logs / events                         |
-| Security                | IAM / RBAC / NetworkPolicy / non-root containers |
-
----
-
-# 🎯 24️⃣ Key DevOps Concepts Demonstrated
-
-Through this project, the following concepts were implemented and practiced:
-
-* CI/CD pipeline design
-* Jenkins declarative pipelines
-* Git-based workflow
-* Docker multi-stage builds
-* Container image versioning
-* Amazon ECR
-* Kubernetes Deployments
-* Kubernetes Services
-* StatefulSets
-* ConfigMaps
-* Secrets
-* Kubernetes RBAC
-* NetworkPolicies
-* Amazon EKS
 * SonarQube
 * Quality Gates
 * Trivy
-* Nexus
+* Non-root containers
+* Kubernetes Secrets
+* NetworkPolicy
+
+### Kubernetes
+
+* Deployments
+* Services
+* StatefulSets
+* ConfigMaps
+* Secrets
+* Probes
+* Resource requests/limits
+* RollingUpdate
+* PersistentVolumeClaims
+* StorageClasses
+* NetworkPolicy
+
+### AWS
+
+* Amazon EKS
+* Amazon ECR
+* AWS EBS
+* EBS CSI Driver
+* IAM
+* AWS networking
+
+### Monitoring
+
 * Prometheus
 * Grafana
 * Alertmanager
-* Kubernetes monitoring
-* Application logging
-* Container security
-* IAM
-* AWS networking
-* Production deployment validation
-* DevSecOps principles
+* Node Exporter
+* kube-state-metrics
 
 ---
 
-# 🏁 Conclusion
+# ⚠️ 36. Important Architecture Note
 
-This project demonstrates an end-to-end DevOps and DevSecOps workflow for deploying a three-tier Blog Application on Amazon EKS.
+This project should be described accurately as a:
 
-The implementation combines:
+> **Jenkins-based CI/CD and DevSecOps deployment to Amazon EKS**
+
+It should **not** be described as:
+
+* Nexus-based artifact management
+* Argo CD GitOps deployment
+* Helm-based deployment
+* GitOps manifest update workflow
+
+Those technologies are not part of the current implemented pipeline.
+
+The current deployment mechanism is:
 
 ```text
-GitHub
-   ↓
 Jenkins
-   ↓
-SonarQube
-   ↓
-Build & Test
-   ↓
-Docker
-   ↓
-Trivy
-   ↓
-Nexus / ECR
-   ↓
-Amazon EKS
-   ↓
-Kubernetes
-   ↓
-Prometheus + Grafana
-   ↓
-Logging + Security
+   │
+   ├── Build
+   ├── Test
+   ├── SonarQube
+   ├── Quality Gate
+   ├── Docker
+   ├── Trivy
+   ├── ECR
+   │
+   └── kubectl set image
+              │
+              ▼
+             EKS
 ```
-
-The project provides practical experience with application deployment, Kubernetes orchestration, CI/CD automation, container security, cloud infrastructure, observability, and production-oriented DevOps practices.
 
 ---
 
-## 👨‍💻 Author
+# 🎯 37. Project Outcome
 
-**Rokith Kumar**
+The project demonstrates an end-to-end DevOps workflow in which application code moves from GitHub through automated CI/CD and security validation before being deployed to Amazon EKS.
 
-DevOps / Cloud / Infrastructure Engineering
+The final implementation includes:
 
-Skills demonstrated:
+```text
+Source Control
+      ↓
+CI Automation
+      ↓
+Code Quality
+      ↓
+Quality Gate
+      ↓
+Containerization
+      ↓
+Security Scanning
+      ↓
+Container Registry
+      ↓
+Kubernetes Deployment
+      ↓
+Rolling Update
+      ↓
+Persistent Database
+      ↓
+Network Isolation
+      ↓
+Monitoring & Alerting
+```
 
-`AWS` `EKS` `Kubernetes` `Docker` `Jenkins` `Git` `GitHub` `Terraform` `SonarQube` `Trivy` `Nexus` `Prometheus` `Grafana` `Linux` `CI/CD` `DevSecOps`
+The implementation focuses on demonstrating practical DevOps, Kubernetes, AWS, CI/CD, and DevSecOps concepts using a complete three-tier application.
