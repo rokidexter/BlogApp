@@ -127,11 +127,13 @@ pipeline {
                     echo "=== Trivy Version ==="
                     trivy --version
 
+                    # Scan backend image for HIGH and CRITICAL vulnerabilities
                     echo "=== Trivy Backend Image Scan ==="
                     trivy image \
                         --severity HIGH,CRITICAL \
                         blogapp-backend:${BUILD_NUMBER}
 
+                    # Scan frontend image for HIGH and CRITICAL vulnerabilities
                     echo "=== Trivy Frontend Image Scan ==="
                     trivy image \
                         --severity HIGH,CRITICAL \
@@ -172,6 +174,45 @@ pipeline {
                         382170164329.dkr.ecr.ap-south-1.amazonaws.com/blogapp-frontend:${BUILD_NUMBER}
 
                     echo "=== ECR Push Completed ==="
+                '''
+            }
+        }
+
+        stage('EKS Deployment') {
+            steps {
+                sh '''
+                    echo "=== EKS Cluster ==="
+                    kubectl config current-context
+
+                    echo "=== Updating Backend Deployment ==="
+                    kubectl set image deployment/blogapp-backend \
+                        blogapp-backend=382170164329.dkr.ecr.ap-south-1.amazonaws.com/blogapp-backend:${BUILD_NUMBER}
+
+                    echo "=== Updating Frontend Deployment ==="
+                    kubectl set image deployment/blogapp-frontend \
+                        blogapp-frontend=382170164329.dkr.ecr.ap-south-1.amazonaws.com/blogapp-frontend:${BUILD_NUMBER}
+
+                    echo "=== Waiting for Backend Rollout ==="
+                    kubectl rollout status deployment/blogapp-backend \
+                        --timeout=5m
+
+                    echo "=== Waiting for Frontend Rollout ==="
+                    kubectl rollout status deployment/blogapp-frontend \
+                        --timeout=5m
+
+                    echo "=== Backend Image ==="
+                    kubectl get deployment blogapp-backend \
+                        -o jsonpath='{.spec.template.spec.containers[0].image}{"\\n"}'
+
+                    echo "=== Frontend Image ==="
+                    kubectl get deployment blogapp-frontend \
+                        -o jsonpath='{.spec.template.spec.containers[0].image}{"\\n"}'
+
+                    echo "=== Running Pods ==="
+                    kubectl get pods
+
+                    echo "=== Services ==="
+                    kubectl get svc
                 '''
             }
         }
